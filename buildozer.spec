@@ -42,7 +42,7 @@ version = 0.1
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,pygame_sdl2
+requirements = python3,pysdl2
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes
@@ -351,7 +351,7 @@ android.allow_backup = True
 
 # (str) Bootstrap to use for android builds
 # Run "buildozer android p4a -- bootstraps" for a list of valid values.
-p4a.bootstrap = pygame_sdl2
+p4a.bootstrap = sdl2
 
 # (int) port number to specify an explicit --port= p4a argument (eg for bootstrap flask)
 #p4a.port =
