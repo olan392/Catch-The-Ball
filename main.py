@@ -1,85 +1,76 @@
-import pygame
+from kivy.app import App
+from kivy.uix.widget import Widget
+from kivy.graphics import Color, Rectangle, Ellipse
+from kivy.core.text import Label as CoreLabel
+from kivy.clock import Clock
 import random
 
-# 1. Setup - Use pygame.SCALED for better mobile compatibility
-pygame.init()
-
-# Add app icon
-icon = pygame.image.load('icon.png')
-
-pygame.display.set_icon(icon)
-
-# Get the device screen size
-info = pygame.display.Info()
-SCREEN_WIDTH = info.current_w
-SCREEN_HEIGHT = info.current_h
-
-# If testing on Desktop, you might want a fixed size:
-# SCREEN_WIDTH, SCREEN_HEIGHT = 400, 700 
-
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
-clock = pygame.time.Clock()
-
-# Colors
-WHITE = (255, 255, 255)
-RED = (255, 50, 50)
-BLUE = (50, 50, 255)
-
-# Player setup (Scaling size based on screen width)
-player_size = SCREEN_WIDTH // 6
-player_pos = [SCREEN_WIDTH // 2, SCREEN_HEIGHT - (player_size * 2)]
-
-# Target setup
-target_size = SCREEN_WIDTH // 10
-target_pos = [random.randint(0, SCREEN_WIDTH - target_size), 0]
-speed = SCREEN_HEIGHT // 100  # Adjust speed based on screen height
-
-score = 0
-font = pygame.font.SysFont("Arial", SCREEN_WIDTH // 15)
-
-running = True
-while running:
-    screen.fill(WHITE)
-
-    # 2. Touch/Event Handling
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+class GameWidget(Widget):
+    def __init__(self, **kwargs):
+        super(GameWidget, self).__init__(**kwargs)
         
-        # MOBILE TOUCH INPUT
-        if event.type == pygame.FINGERMOTION or event.type == pygame.FINGERDOWN:
-            # Finger coordinates are normalized (0.0 to 1.0), so we multiply by screen size
-            player_pos[0] = event.x * SCREEN_WIDTH - (player_size // 2)
+        # Game variables
+        self.score = 0
+        self.speed = 20
+        
+        # Schedule the main game loop at 60 FPS
+        Clock.schedule_interval(self.update, 1.0 / 60.0)
 
-        # DESKTOP MOUSE INPUT (for testing)
-        if event.type == pygame.MOUSEMOTION:
-            player_pos[0] = event.pos[0] - (player_size // 2)
+    def on_size(self, *args):
+        # Initialize positions based on actual screen size when window opens
+        self.player_size = self.width // 6
+        self.player_pos = [self.width // 2 - self.player_size // 2, 50]
+        
+        self.target_size = self.width // 10
+        self.target_pos = [random.randint(0, self.width - self.target_size), self.height]
 
-    # 3. Game Logic
-    target_pos[1] += speed
-    
-    # Reset target if it falls off screen
-    if target_pos[1] > SCREEN_HEIGHT:
-        target_pos = [random.randint(0, SCREEN_WIDTH - target_size), 0]
-        score -= 1 # Penalty for missing
+    def on_touch_move(self, touch):
+        # Move player with touch/drag anywhere on screen
+        self.player_pos[0] = touch.x - (self.player_size // 2)
 
-    # Collision Detection
-    player_rect = pygame.Rect(player_pos[0], player_pos[1], player_size, player_size)
-    target_rect = pygame.Rect(target_pos[0], target_pos[1], target_size, target_size)
+    def on_touch_down(self, touch):
+        # Allow instant tap-to-position movement
+        self.player_pos[0] = touch.x - (self.player_size // 2)
 
-    if player_rect.colliderect(target_rect):
-        score += 1
-        target_pos = [random.randint(0, SCREEN_WIDTH - target_size), -target_size]
-        speed += 0.2 # Get harder
+    def update(self, dt):
+        # Target movement logic
+        self.target_pos[1] -= self.speed
+        
+        # Reset target if it falls past the bottom
+        if self.target_pos[1] < 0:
+            self.target_pos = [random.randint(0, self.width - self.target_size), self.height]
+            self.score -= 1
 
-    # 4. Drawing
-    pygame.draw.rect(screen, BLUE, player_rect)
-    pygame.draw.ellipse(screen, RED, target_rect)
-    
-    score_text = font.render(f"Score: {score}", True, (0, 0, 0))
-    screen.blit(score_text, (20, 20))
+        # Simple bounding box collision detection
+        player_x, player_y = self.player_pos
+        target_x, target_y = self.target_pos
+        
+        if (player_x < target_x + self.target_size and
+            player_x + self.player_size > target_x and
+            player_y < target_y + self.target_size and
+            player_y + self.player_size > target_y):
+            self.score += 1
+            self.target_pos = [random.randint(0, self.width - self.target_size), self.height]
+            self.speed += 0.2
 
-    pygame.display.flip()
-    clock.tick(60)
+        # Redraw everything
+        self.canvas.clear()
+        with self.canvas:
+            # Background (White)
+            Color(1, 1, 1, 1)
+            Rectangle(pos=(0, 0), size=(self.width, self.height))
 
-pygame.quit()
+            # Player (Blue Box)
+            Color(0.2, 0.2, 1, 1)
+            Rectangle(pos=(self.player_pos[0], self.player_pos[1]), size=(self.player_size, self.player_size))
+
+            # Target (Red Circle/Ellipse)
+            Color(1, 0.2, 0.2, 1)
+            Ellipse(pos=(self.target_pos[0], self.target_pos[1]), size=(self.target_size, self.target_size))
+
+class CatchTheBallApp(App):
+    def build(self):
+        return GameWidget()
+
+if __name__ == '__main__':
+    CatchTheBallApp().run()
